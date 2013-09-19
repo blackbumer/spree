@@ -49,7 +49,7 @@ module Spree
 
     has_many :prices, -> { order('spree_variants.position, spree_variants.id, currency') }, through: :variants
 
-    has_many :stock_items, through: :variants
+    has_many :stock_items, through: :variants_including_master
 
     delegate_belongs_to :master, :sku, :price, :currency, :display_amount, :display_price, :weight, :height, :width, :depth, :is_master, :has_default_price?, :cost_currency, :price_in, :amount_in
     delegate_belongs_to :master, :cost_price if Variant.table_exists? && Variant.column_names.include?('cost_price')
@@ -82,11 +82,6 @@ module Spree
     after_initialize :ensure_master
 
     before_destroy :punch_permalink
-
-    def variants_with_only_master
-      ActiveSupport::Deprecation.warn("[SPREE] Spree::Product#variants_with_only_master will be deprecated in Spree 1.3. Please use Spree::Product#master instead.")
-      master
-    end
 
     def to_param
       permalink.present? ? permalink : (permalink_was || name.to_s.to_url)
@@ -146,8 +141,11 @@ module Spree
     end
 
     def self.like_any(fields, values)
-      where_str = fields.map { |field| Array.new(values.size, "#{self.quoted_table_name}.#{field} #{LIKE} ?").join(' OR ') }.join(' OR ')
-      self.where([where_str, values.map { |value| "%#{value}%" } * fields.size].flatten)
+      where fields.map { |field|
+        values.map { |value|
+          arel_table[field].matches("%#{value}%")
+        }.inject(:or)
+      }.inject(:or)
     end
 
     # Suitable for displaying only variants that has at least one option value.

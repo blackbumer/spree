@@ -557,8 +557,7 @@ describe Spree::Payment do
     it "should build the payment's source" do
       params = { :amount => 100, :payment_method => gateway,
         :source_attributes => {
-          :year => 1.month.from_now.year,
-          :month =>1.month.from_now.month,
+          :expiry =>"1 / 99",
           :number => '1234567890123',
           :verification_value => '123'
         }
@@ -570,13 +569,8 @@ describe Spree::Payment do
     end
 
     it "errors when payment source not valid" do
-      params = { 
-        :amount => 100,
-        :payment_method => gateway,
-        :source_attributes => {
-          :year => "2012", :month =>"1"
-        }
-      }
+      params = { :amount => 100, :payment_method => gateway,
+        :source_attributes => {:expiry => "1 / 12" }}
 
       payment = Spree::Payment.new(params)
       payment.should_not be_valid
@@ -611,11 +605,20 @@ describe Spree::Payment do
   context "#set_unique_identifier" do
     # Regression test for #1998
     it "sets a unique identifier on create" do
-      payment.run_callbacks(:save)
+      payment.run_callbacks(:create)
       payment.identifier.should_not be_blank
       payment.identifier.size.should == 8
       payment.identifier.should be_a(String)
     end
+
+    # Regression test for #3733
+    it "does not regenerate the identifier on re-save" do
+      payment.save
+      old_identifier = payment.identifier
+      payment.save
+      payment.identifier.should == old_identifier
+    end
+
 
     context "other payment exists" do
       let(:other_payment) {
@@ -632,7 +635,7 @@ describe Spree::Payment do
         payment.should_receive(:generate_identifier).and_return(other_payment.identifier)
         payment.should_receive(:generate_identifier).and_call_original
 
-        payment.run_callbacks(:save)
+        payment.run_callbacks(:create)
 
         payment.identifier.should_not be_blank
         payment.identifier.should_not == other_payment.identifier
