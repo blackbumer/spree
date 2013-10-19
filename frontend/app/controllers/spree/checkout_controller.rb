@@ -151,27 +151,14 @@ module Spree
         end
       end
 
-      def rescue_from_spree_gateway_error
+      def rescue_from_spree_gateway_error(exception)
         flash[:error] = Spree.t(:spree_gateway_error_flash_for_checkout)
+        @order.errors.add(:base, exception.message)
         render :edit
       end
 
       def check_authorization
         authorize!(:edit, current_order, session[:access_token])
-      end
-
-      def apply_coupon_code
-        if params[:order] && params[:order][:coupon_code]
-          @order.coupon_code = params[:order][:coupon_code]
-
-          coupon_result = Spree::Promo::CouponApplicator.new(@order).apply
-          if coupon_result[:coupon_applied?]
-            flash[:success] = coupon_result[:success] if coupon_result[:success].present?
-          else
-            flash[:error] = coupon_result[:error]
-            respond_with(@order) { |format| format.html { render :edit } } and return
-          end
-        end
       end
   end
 end

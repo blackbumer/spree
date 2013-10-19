@@ -52,7 +52,8 @@ module Spree
     has_many :stock_items, through: :variants_including_master
 
     delegate_belongs_to :master, :sku, :price, :currency, :display_amount, :display_price, :weight, :height, :width, :depth, :is_master, :has_default_price?, :cost_currency, :price_in, :amount_in
-    delegate_belongs_to :master, :cost_price if Variant.table_exists? && Variant.column_names.include?('cost_price')
+
+    delegate_belongs_to :master, :cost_price
 
     after_create :set_master_variant_defaults
     after_create :add_properties_and_option_types_from_prototype
@@ -233,7 +234,7 @@ module Spree
       # there's a weird quirk with the delegate stuff that does not automatically save the delegate object
       # when saving so we force a save using a hook.
       def save_master
-        master.save if master && (master.changed? || master.new_record? || (master.default_price && (master.default_price.changed || master.default_price.new_record)))
+        master.save if master && (master.changed? || master.new_record? || (master.default_price && (master.default_price.changed? || master.default_price.new_record?)))
       end
 
       def ensure_master

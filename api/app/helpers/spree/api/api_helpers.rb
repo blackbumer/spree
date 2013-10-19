@@ -28,7 +28,7 @@ module Spree
       end
 
       def option_value_attributes
-        [:id, :name, :presentation, :option_type_name, :option_type_id]
+        [:id, :name, :presentation, :option_type_name, :option_type_id, :option_type_presentation]
       end
 
       def order_attributes
@@ -44,7 +44,7 @@ module Spree
       end
 
       def payment_attributes
-        [:id, :source_type, :source_id, :amount, :payment_method_id, :response_code, :state, :avs_response, :created_at, :updated_at]
+        [:id, :source_type, :source_id, :amount, :display_amount, :payment_method_id, :response_code, :state, :avs_response, :created_at, :updated_at]
       end
 
       def payment_method_attributes
@@ -113,4 +113,3 @@ module Spree
     end
   end
 end
-

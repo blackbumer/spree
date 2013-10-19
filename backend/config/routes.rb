@@ -1,4 +1,4 @@
-Spree::Core::Engine.routes.draw do
+Spree::Core::Engine.add_routes do
   get '/admin', :to => 'admin/orders#index', :as => :admin
 
   namespace :admin do
@@ -9,7 +9,6 @@ Spree::Core::Engine.routes.draw do
       resources :promotion_actions
     end
 
-    resources :adjustments
     resources :zones
     resources :banners do
       member do

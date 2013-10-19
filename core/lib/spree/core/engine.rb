@@ -6,26 +6,6 @@ module Spree
 
       config.autoload_paths += %W(#{config.root}/lib)
 
-      config.after_initialize do
-        ActiveSupport::Notifications.subscribe(/^spree\./) do |*args|
-          event_name, start_time, end_time, id, payload = args
-          Activator.active.event_name_starts_with(event_name).each do |activator|
-            payload[:event_name] = event_name
-            activator.activate(payload)
-          end
-        end
-      end
-
-      # We need to reload the routes here due to how Spree sets them up.
-      # The different facets of Spree (backend, frontend, etc.) append/prepend
-      # routes to Core *after* Core has been loaded.
-      #
-      # So we wait until after initialization is complete to do one final reload.
-      # This then makes the appended/prepended routes available to the application.
-      config.after_initialize do
-        Rails.application.routes_reloader.reload!
-      end
-
       initializer "spree.environment", :before => :load_config_initializers do |app|
         app.config.spree = Spree::Core::Environment.new
         Spree::Config = app.config.spree.preferences #legacy access
@@ -81,8 +61,12 @@ module Spree
           Spree::Calculator::FlatRate,
           Spree::Calculator::FlexiRate,
           Spree::Calculator::PerItem,
-          Spree::Calculator::PercentPerItem,
-          Spree::Calculator::FreeShipping
+          Spree::Calculator::PercentPerItem
+        ]
+
+        app.config.spree.calculators.add_class('promotion_actions_create_item_adjustments')
+        app.config.spree.calculators.promotion_actions_create_item_adjustments = [
+          Spree::Calculator::PercentOnLineItem
         ]
       end
 
@@ -96,8 +80,11 @@ module Spree
       end
 
       initializer 'spree.promo.register.promotions.actions' do |app|
-        app.config.spree.promotions.actions = [Spree::Promotion::Actions::CreateAdjustment,
-          Spree::Promotion::Actions::CreateLineItems]
+        app.config.spree.promotions.actions = [
+          Promotion::Actions::CreateAdjustment,
+          Promotion::Actions::CreateItemAdjustments,
+          Promotion::Actions::CreateLineItems,
+          Promotion::Actions::FreeShipping]
       end
 
       # filter sensitive information during logging
@@ -111,3 +98,5 @@ module Spree
     end
   end
 end
+
+require 'spree/core/routes'

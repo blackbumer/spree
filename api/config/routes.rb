@@ -1,4 +1,4 @@
-Spree::Core::Engine.routes.draw do
+Spree::Core::Engine.add_routes do
   namespace :admin do
     resources :users do
       member do
@@ -41,6 +41,7 @@ Spree::Core::Engine.routes.draw do
       member do
         put :cancel
         put :empty
+        put :apply_coupon_code
       end
 
       resources :line_items

@@ -62,20 +62,22 @@ module Spree
       order.shipped_shipments.collect{|s| s.inventory_units.to_a}.flatten
     end
 
+    # Used when Adjustment#update! wants to update the related adjustmenrt
+    def compute_amount(*args)
+      amount.abs * -1
+    end
+
     private
+
       def must_have_shipped_units
         errors.add(:order, Spree.t(:has_no_shipped_units)) if order.nil? || !order.shipped_shipments.any?
       end
 
       def generate_number
-        return if number
-
-        record = true
-        while record
+        self.number ||= loop do
           random = "RMA#{Array.new(9){rand(9)}.join}"
-          record = self.class.where(number: random).first
+          break random unless self.class.exists?(number: random)
         end
-        self.number = random
       end
 
       def process_return
@@ -84,10 +86,11 @@ module Spree
           Spree::StockMovement.create!(stock_item_id: iu.find_stock_item.id, quantity: 1)
         end
 
-        credit = Adjustment.new(amount: amount.abs * -1, label: Spree.t(:rma_credit))
+        credit = Adjustment.new(amount: compute_amount, label: Spree.t(:rma_credit))
         credit.source = self
         credit.adjustable = order
         credit.save
+        order.update!
 
         order.return if inventory_units.all?(&:returned?)
       end

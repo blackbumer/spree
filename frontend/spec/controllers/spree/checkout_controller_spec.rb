@@ -58,11 +58,6 @@ describe Spree::CheckoutController do
         order.should_receive(:associate_user!).with(user)
         spree_get :edit, {}, :order_id => 1
       end
-
-      it "should fire the spree.user.signup event if user has just signed up" do
-        controller.should_receive(:fire_event).with("spree.user.signup", :user => user, :order => order)
-        spree_get :edit, {}, :spree_user_signup => true
-      end
     end
   end
 
@@ -180,13 +175,14 @@ describe Spree::CheckoutController do
     context "Spree::Core::GatewayError" do
       before do
         order.stub :user => user
-        order.stub(:update_attributes).and_raise(Spree::Core::GatewayError)
+        order.stub(:update_attributes).and_raise(Spree::Core::GatewayError.new("Invalid something or other."))
         spree_post :update, {:state => "address"}
       end
 
-      it "should render the edit template" do
+      it "should render the edit template and display exception message" do
         response.should render_template :edit
         flash[:error].should == Spree.t(:spree_gateway_error_flash_for_checkout)
+        assigns(:order).errors[:base].should include("Invalid something or other.")
       end
     end
 
@@ -313,6 +309,7 @@ describe Spree::CheckoutController do
   end
 
   it "does remove unshippable items before payment" do
+    order.stub :payment_required? => true
     controller.stub :check_authorization => true
 
     expect {
